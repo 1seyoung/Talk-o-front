@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Talko - 회원가입</title>
+  <style>
+    :root {
+      --primary-color: #4e73df;
+      --primary-hover: #2e59d9;
+      --secondary-color: #f8f9fc;
+      --text-color: #5a5c69;
+      --success-color: #1cc88a;
+      --danger-color: #e74a3b;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --border-radius: 8px;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+    }
+    
+    body {
+      background-color: #f8f9fc;
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      width: 100%;
+      max-width: 480px;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .logo {
+      margin-bottom: 20px;
+    }
+    
+    .logo img {
+      max-width: 150px;
+      height: auto;
+    }
+    
+    h1 {
+      color: var(--primary-color);
+      margin-bottom: 30px;
+      font-weight: 600;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .input-group {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    
+    input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid #e3e6f0;
+      border-radius: var(--border-radius);
+      color: var(--text-color);
+      font-size: 16px;
+      transition: border-color 0.2s ease;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.15);
+    }
+    
+    .email-group {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .email-group input {
+      flex: 1;
+    }
+    
+    button {
+      cursor: pointer;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 12px 15px;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+    }
+    
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .check-email-btn {
+      white-space: nowrap;
+      background-color: #858796;
+    }
+    
+    .check-email-btn:hover {
+      background-color: #717484;
+    }
+    
+    .submit-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 14px;
+      font-size: 18px;
+    }
+
+    .status-message {
+      margin-top: 8px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .valid-message {
+      color: var(--success-color);
+    }
+
+    .invalid-message {
+      color: var(--danger-color);
+    }
+
+    .show-password {
+      position: absolute;
+      right: 15px;
+      cursor: pointer;
+      user-select: none;
+      color: #858796;
+    }
+    
+    .navigation-links {
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    
+    .navigation-links a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    
+    .navigation-links a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <img src="talko-logo.png" alt="Talko 로고">
+    </div>
+    <h1>회원가입</h1>
+    <form id="signupForm">
+      <div class="form-group">
+        <label for="name">이름</label>
+        <div class="input-group">
+          <input type="text" id="name" placeholder="이름을 입력해주세요" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="email">이메일</label>
+        <div class="email-group">
+          <input type="email" id="email" placeholder="이메일 주소를 입력해주세요" required>
+          <button type="button" class="check-email-btn" id="checkEmailBtn">중복 확인</button>
+        </div>
+        <div id="emailStatus" class="status-message"></div>
+      </div>
+      
+      <div class="form-group">
+        <label for="password">비밀번호</label>
+        <div class="input-group">
+          <input type="password" id="password" placeholder="비밀번호를 입력해주세요" required>
+          <span class="show-password" id="togglePassword">보기</span>
+        </div>
+      </div>
+      
+      <button type="submit" class="submit-btn">가입하기</button>
+    </form>
+
+    <div class="navigation-links">
+      <p>이미 계정이 있으신가요? <a href="login.html">로그인</a></p>
+      <p><a href="index.html">홈페이지로 돌아가기</a></p>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+  <script>
+    // 이메일 유효성 검사
+    async function checkEmail() {
+      const email = document.getElementById('email').value;
+      const emailStatus = document.getElementById('emailStatus');
+
+      if (!email) {
+        alert('이메일을 입력해주세요.');
+        return;
+      }
+
+      const url = new URL('http://localhost:8081/api/user/check-email');
+      url.searchParams.append('email', email);
+
+      try {
+        // 상태 메시지 초기화 및 표시
+        emailStatus.style.display = 'block';
+        emailStatus.textContent = '이메일 확인 중...';
+        emailStatus.className = 'status-message';
+
+        const response = await fetch(url);
+        const exists = await response.json();
+
+        if (exists) {
+          emailStatus.textContent = '이미 사용 중인 이메일입니다.';
+          emailStatus.className = 'status-message invalid-message';
+        } else {
+          emailStatus.textContent = '사용 가능한 이메일입니다.';
+          emailStatus.className = 'status-message valid-message';
+        }
+      } catch (error) {
+        emailStatus.textContent = '이메일 확인 중 오류가 발생했습니다.';
+        emailStatus.className = 'status-message invalid-message';
+      }
+    }
+
+    // 비밀번호 보기/숨기기 기능
+    document.getElementById('togglePassword').addEventListener('click', function() {
+      const passwordInput = document.getElementById('password');
+      const toggleText = this;
+      
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleText.textContent = '숨기기';
+      } else {
+        passwordInput.type = 'password';
+        toggleText.textContent = '보기';
+      }
+    });
+
+    // 이메일 중복 확인 버튼 이벤트
+    document.getElementById('checkEmailBtn').addEventListener('click', checkEmail);
+
+    // 회원가입 양식 제출 이벤트
+    document.getElementById('signupForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const userData = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+      };
+      
+      try {
+        const response = await fetch('http://localhost:8081/api/user/signup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userData)
+        });
+        
+        if (!response.ok) {
+          throw new Error('회원가입 실패');
+        }
+        
+        const data = await response.json();
+        alert('회원가입이 성공적으로 완료되었습니다!');
+        // 회원가입 성공 시 홈페이지로 리디렉션
+        window.location.href = 'index.html';
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+  </script>
+</body>
+</html>

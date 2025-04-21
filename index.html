@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Talko - 홈페이지</title>
+  <style>
+    :root {
+      --primary-color: #4e73df;
+      --primary-hover: #2e59d9;
+      --secondary-color: #f8f9fc;
+      --text-color: #5a5c69;
+      --success-color: #1cc88a;
+      --danger-color: #e74a3b;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      --border-radius: 8px;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+    }
+    
+    body {
+      background-color: #f8f9fc;
+      color: var(--text-color);
+      min-height: 100vh;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    /* 네비게이션 스타일 */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 0;
+      border-bottom: 1px solid #e3e6f0;
+      margin-bottom: 30px;
+    }
+    
+    .logo {
+      height: 50px;
+    }
+    
+    .logo img {
+      height: 100%;
+      width: auto;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .btn {
+      cursor: pointer;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+    }
+    
+    .btn:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .btn-outline {
+      background-color: transparent;
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    /* 메인 콘텐츠 스타일 */
+    .hero {
+      display: flex;
+      align-items: center;
+      padding: 40px 0;
+      gap: 30px;
+    }
+    
+    .hero-content {
+      flex: 1;
+    }
+    
+    .hero-image {
+      flex: 1;
+      text-align: center;
+    }
+    
+    .hero-image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+    }
+    
+    h1 {
+      color: var(--primary-color);
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+    
+    h2 {
+      color: var(--text-color);
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+    
+    p {
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    
+    /* 특징 섹션 스타일 */
+    .features {
+      padding: 40px 0;
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      margin: 40px 0;
+    }
+    
+    .features-heading {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      padding: 0 20px;
+    }
+    
+    .feature-card {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .feature-icon {
+      font-size: 40px;
+      color: var(--primary-color);
+      margin-bottom: 15px;
+    }
+    
+    .feature-title {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    
+    /* 푸터 스타일 */
+    footer {
+      background-color: white;
+      padding: 20px 0;
+      border-top: 1px solid #e3e6f0;
+      margin-top: 40px;
+    }
+    
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .footer-links a {
+      color: var(--text-color);
+      text-decoration: none;
+    }
+    
+    .footer-links a:hover {
+      color: var(--primary-color);
+    }
+    
+    /* 반응형 디자인 */
+    @media (max-width: 768px) {
+      .hero {
+        flex-direction: column;
+      }
+      
+      .hero-content, .hero-image {
+        text-align: center;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .footer-content {
+        flex-direction: column;
+        gap: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav class="navbar">
+      <div class="logo">
+        <img src="talko-logo.png" alt="Talko 로고">
+      </div>
+      <div class="nav-buttons">
+        <a href="login.html" class="btn btn-outline">로그인</a>
+        <a href="signup.html" class="btn">회원가입</a>
+      </div>
+    </nav>
+    
+    <main>
+      <section class="hero">
+        <div class="hero-content">
+          <h1>Talko에 오신 것을 환영합니다</h1>
+          <h2>커뮤니케이션의 새로운 시작</h2>
+          <p>Talko는 사용자 중심의 소통 플랫폼으로, 편리하고 안전한 커뮤니케이션 경험을 제공합니다. 지금 가입하고 다양한 기능을 경험해보세요.</p>
+          <a href="signup.html" class="btn">시작하기</a>
+        </div>
+      </section>
+    
+    </main>
+  </div>
+  
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="copyright">
+          &copy; 2025 Talko. All rights reserved.
+        </div>
+        <div class="footer-links">
+          <a href="#">서비스 약관</a>
+          <a href="#">개인정보처리방침</a>
+          <a href="#">고객지원</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+  <script>
+    // 필요한 JavaScript 코드가 있다면 여기에 추가
+  </script>
+</body>
+</html>
