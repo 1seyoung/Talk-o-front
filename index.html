@@ -58,6 +58,7 @@
     .nav-buttons {
       display: flex;
       gap: 15px;
+      align-items: center;
     }
     
     .btn {
@@ -87,6 +88,30 @@
     .btn-outline:hover {
       background-color: var(--primary-color);
       color: white;
+    }
+    
+    /* 사용자 프로필 스타일 */
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-right: 10px;
+    }
+    
+    .profile-img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+    }
+    
+    .profile-name {
+      font-weight: 500;
     }
     
     /* 메인 콘텐츠 스타일 */
@@ -169,6 +194,93 @@
       font-weight: 600;
     }
     
+    /* 로그인 후 대시보드 스타일 */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    
+    .dashboard-card {
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 180px;
+    }
+    
+    .dashboard-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    
+    .dashboard-icon {
+      font-size: 24px;
+      color: var(--gray-dark);
+    }
+    
+    .dashboard-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .stats {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: var(--text-color);
+    }
+    
+    .stats-label {
+      color: #858796;
+      font-size: 0.9rem;
+    }
+    
+    .recent-list {
+      list-style: none;
+      margin-top: 10px;
+    }
+    
+    .recent-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.95rem;
+    }
+    
+    .recent-item:last-child {
+      border-bottom: none;
+    }
+    
+    .recent-time {
+      font-size: 0.8rem;
+      color: #858796;
+      margin-left: 5px;
+    }
+    
+    .dashboard-footer {
+      margin-top: 15px;
+      text-align: right;
+    }
+    
+    .dashboard-link {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+    
     /* 푸터 스타일 */
     footer {
       background-color: white;
@@ -195,6 +307,49 @@
     
     .footer-links a:hover {
       color: var(--primary-color);
+    }
+    
+    /* 드롭다운 메뉴 스타일 */
+    .dropdown {
+      position: relative;
+      cursor: pointer;
+    }
+    
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+      min-width: 180px;
+      padding: 8px 0;
+      z-index: 100;
+      display: none;
+    }
+    
+    .dropdown-menu.show {
+      display: block;
+    }
+    
+    .dropdown-item {
+      padding: 8px 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    
+    .dropdown-item:hover {
+      background-color: var(--secondary-color);
+    }
+    
+    .dropdown-item i {
+      color: #858796;
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
     }
     
     /* 반응형 디자인 */
@@ -224,13 +379,16 @@
       <div class="logo">
         <img src="talko-logo.png" alt="Talko 로고">
       </div>
-      <div class="nav-buttons">
+      <div class="nav-buttons" id="navButtons">
+        <!-- 로그인 상태에 따라 다르게 표시됩니다 -->
         <a href="login.html" class="btn btn-outline">로그인</a>
         <a href="signup.html" class="btn">회원가입</a>
       </div>
     </nav>
     
-    <main>
+    <main id="mainContent">
+      <!-- 로그인 상태에 따라 다른 컨텐츠가 표시됩니다 -->
+      <!-- 기본 메인 컨텐츠 (로그인 전) -->
       <section class="hero">
         <div class="hero-content">
           <h1>Talko에 오신 것을 환영합니다</h1>
@@ -239,7 +397,6 @@
           <a href="signup.html" class="btn">시작하기</a>
         </div>
       </section>
-    
     </main>
   </div>
   
@@ -260,7 +417,205 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
   <script>
-    // 필요한 JavaScript 코드가 있다면 여기에 추가
+    document.addEventListener('DOMContentLoaded', function() {
+      const navButtons = document.getElementById('navButtons');
+      const mainContent = document.getElementById('mainContent');
+      
+      // 로그인 상태 확인
+      const accessToken = localStorage.getItem('accessToken');
+      const userName = localStorage.getItem('userName');
+      
+      if (accessToken && userName) {
+        // 로그인된 상태일 때 네비게이션 변경
+        navButtons.innerHTML = `
+          <div class="user-profile dropdown">
+            <div class="profile-img">${userName.charAt(0).toUpperCase()}</div>
+            <span class="profile-name">${userName}</span>
+            <i class="fas fa-chevron-down ml-2"></i>
+            <div class="dropdown-menu">
+              <div class="dropdown-item">
+                <i class="fas fa-user"></i>
+                <span>프로필</span>
+              </div>
+              <div class="dropdown-item">
+                <i class="fas fa-cog"></i>
+                <span>설정</span>
+              </div>
+              <a href="chat.html" class="dropdown-item">
+                <i class="fas fa-comments"></i>
+                <span>채팅</span>
+              </a>
+              <div class="dropdown-item" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>로그아웃</span>
+              </div>
+            </div>
+          </div>
+          <a href="chat.html" class="btn">채팅으로 이동</a>
+        `;
+        
+        // 로그인된 상태일 때 메인 컨텐츠 변경
+        mainContent.innerHTML = `
+          <h1>안녕하세요, ${userName}님!</h1>
+          <h2>대화를 시작하고 소통해보세요</h2>
+          
+          <div class="dashboard">
+            <div class="dashboard-card">
+              <div class="dashboard-title">
+                <span>채팅방</span>
+                <i class="fas fa-comments dashboard-icon"></i>
+              </div>
+              <div class="dashboard-content">
+                <div class="stats" id="roomCount">-</div>
+                <div class="stats-label">참여 중인 채팅방</div>
+                
+                <ul class="recent-list" id="recentRooms">
+                  <li class="recent-item">채팅방 목록을 불러오는 중...</li>
+                </ul>
+              </div>
+              <div class="dashboard-footer">
+                <a href="chat.html" class="dashboard-link">
+                  <span>모든 채팅방 보기</span>
+                  <i class="fas fa-arrow-right"></i>
+                </a>
+              </div>
+            </div>
+            
+            <div class="dashboard-card">
+              <div class="dashboard-title">
+                <span>빠른 접근</span>
+                <i class="fas fa-bolt dashboard-icon"></i>
+              </div>
+              <div class="dashboard-content">
+                <div class="quick-actions" style="margin-top: 20px;">
+                  <a href="chat.html" class="btn" style="margin-bottom: 10px; width: 100%;">
+                    <i class="fas fa-comments"></i> 채팅 시작하기
+                  </a>
+                  <a href="#" class="btn btn-outline" style="width: 100%;">
+                    <i class="fas fa-user-plus"></i> 친구 추가하기
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="features">
+            <div class="features-heading">
+              <h2>Talko의 주요 기능</h2>
+              <p>다양한 기능으로 더 나은 소통을 경험하세요</p>
+            </div>
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <i class="fas fa-comments"></i>
+                </div>
+                <h3 class="feature-title">실시간 메시징</h3>
+                <p>빠르고 안정적인 실시간 메시징으로 언제 어디서나 대화를 나눌 수 있습니다.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <h3 class="feature-title">보안 및 개인정보 보호</h3>
+                <p>엔드투엔드 암호화로 사용자의 대화 내용과 개인정보를 안전하게 보호합니다.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon">
+                  <i class="fas fa-users"></i>
+                </div>
+                <h3 class="feature-title">그룹 채팅</h3>
+                <p>다양한 주제별 그룹 채팅으로 여러 사람과 함께 소통할 수 있습니다.</p>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // 드롭다운 메뉴 토글 기능
+        const dropdown = document.querySelector('.dropdown');
+        dropdown.addEventListener('click', function(e) {
+          e.stopPropagation();
+          this.querySelector('.dropdown-menu').classList.toggle('show');
+        });
+        
+        // 화면 클릭 시 드롭다운 닫기
+        document.addEventListener('click', function() {
+          document.querySelector('.dropdown-menu').classList.remove('show');
+        });
+        
+        // 로그아웃 버튼 이벤트
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+          // 로컬 스토리지에서 사용자 정보 삭제
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('userName');
+          localStorage.removeItem('userEmail');
+          localStorage.removeItem('userId');
+          
+          // 페이지 새로고침
+          window.location.reload();
+        });
+        
+        // 채팅방 정보 가져오기
+        fetchRoomInfo();
+      }
+      
+      // 채팅방 정보 가져오기 함수
+      async function fetchRoomInfo() {
+        try {
+          const accessToken = localStorage.getItem('accessToken');
+          const response = await fetch('http://localhost:8081/api/rooms', {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error('채팅방 정보를 불러오는데 실패했습니다.');
+          }
+          
+          const rooms = await response.json();
+          
+          // 채팅방 수 업데이트
+          const roomCount = document.getElementById('roomCount');
+          if (roomCount) {
+            roomCount.textContent = rooms.length;
+          }
+          
+          // 최근 채팅방 목록 업데이트
+          const recentRooms = document.getElementById('recentRooms');
+          if (recentRooms) {
+            if (rooms.length === 0) {
+              recentRooms.innerHTML = `
+                <li class="recent-item">참여 중인 채팅방이 없습니다.</li>
+              `;
+            } else {
+              recentRooms.innerHTML = '';
+              // 최대 3개까지만 표시
+              const recentRoomsToShow = rooms.slice(0, 3);
+              
+              recentRoomsToShow.forEach(room => {
+                const date = new Date(room.updated_at || room.created_at);
+                const formattedDate = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                
+                recentRooms.innerHTML += `
+                  <li class="recent-item">
+                    ${room.name}
+                    <span class="recent-time">${formattedDate}</span>
+                  </li>
+                `;
+              });
+            }
+          }
+        } catch (error) {
+          console.error('채팅방 정보 로드 오류:', error);
+          const recentRooms = document.getElementById('recentRooms');
+          if (recentRooms) {
+            recentRooms.innerHTML = `
+              <li class="recent-item">정보를 불러오는데 실패했습니다.</li>
+            `;
+          }
+        }
+      }
+    });
   </script>
 </body>
 </html>
