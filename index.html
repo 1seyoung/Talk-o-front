@@ -543,16 +543,29 @@
         });
         
         // 로그아웃 버튼 이벤트
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-          // 로컬 스토리지에서 사용자 정보 삭제
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('userName');
-          localStorage.removeItem('userEmail');
-          localStorage.removeItem('userId');
-          
-          // 페이지 새로고침
-          window.location.reload();
-        });
+// 로그아웃 버튼 이벤트
+document.getElementById('logoutBtn').addEventListener('click', function() {
+  const accessToken = localStorage.getItem('accessToken');
+  
+  // API 호출
+  fetch('http://localhost:8081/api/auth/logout', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  }).catch(error => {
+    console.error('로그아웃 API 오류:', error);
+  }).finally(() => {
+    // localStorage에서 모든 사용자 데이터 삭제
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userId');
+    
+    // 페이지 새로고침
+    window.location.reload();
+  });
+});
         
         // 채팅방 정보 가져오기
         fetchRoomInfo();

@@ -1,334 +1,610 @@
-// 채팅 페이지 자바스크립트 (js/chat.js)
+// 전역 변수
+let currentRoomId = null;
+let rooms = [];
+let invitations = [];
+let activeRoom = null;
+
+// DOM 요소 참조
 document.addEventListener('DOMContentLoaded', function() {
-    // 상수 및 변수 정의
-    const API_BASE_URL = 'http://localhost:8081/api';
-    const chatList = document.getElementById('chatList');
-    const searchInput = document.getElementById('searchInput');
-    const newChatBtn = document.getElementById('newChatBtn');
-    const startChatBtn = document.getElementById('startChatBtn');
-    const newChatModal = document.getElementById('newChatModal');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const createRoomBtn = document.getElementById('createRoomBtn');
-    const roomNameInput = document.getElementById('roomName');
-    const logoutBtn = document.getElementById('logout');
-    const logoutButton = document.getElementById('logoutButton');
-    const dropdowns = document.querySelectorAll('.dropdown');
-    let rooms = []; // 채팅방 목록을 저장할 배열
+  // 인증 확인
+  const accessToken = localStorage.getItem('accessToken');
+  const userName = localStorage.getItem('userName');
   
-    // 사용자 인증 확인
-    function checkAuth() {
-      const accessToken = localStorage.getItem('accessToken');
-      if (!accessToken) {
-        window.location.href = 'login.html';
-        return false;
+  if (!accessToken || !userName) {
+    // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+    window.location.href = 'login.html';
+    return;
+  }
+  
+  // 사용자 정보 표시
+  document.getElementById('username').textContent = userName;
+  document.getElementById('profileImg').textContent = userName.charAt(0).toUpperCase();
+  
+  // 초기 데이터 로드
+  loadChatRooms();
+  loadInvitations();
+  
+  // 이벤트 리스너 설정
+  setupEventListeners();
+});
+
+// 이벤트 리스너 설정
+function setupEventListeners() {
+  // 드롭다운 메뉴 토글
+  const dropdowns = document.querySelectorAll('.dropdown');
+  dropdowns.forEach(dropdown => {
+    dropdown.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const menu = this.querySelector('.dropdown-menu');
+      // 다른 모든 드롭다운 메뉴 닫기
+      document.querySelectorAll('.dropdown-menu').forEach(item => {
+        if (item !== menu) item.classList.remove('show');
+      });
+      // 현재 메뉴 토글
+      menu.classList.toggle('show');
+    });
+  });
+  
+  // 화면 클릭 시 드롭다운 메뉴 닫기
+  document.addEventListener('click', function() {
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+      menu.classList.remove('show');
+    });
+  });
+  
+  // 새 채팅방 버튼 클릭
+  document.getElementById('newChatBtn').addEventListener('click', function() {
+    document.getElementById('newChatModal').style.display = 'flex';
+    document.getElementById('roomName').value = '';
+    document.getElementById('roomName').focus();
+  });
+  
+  document.getElementById('startChatBtn').addEventListener('click', function() {
+    document.getElementById('newChatModal').style.display = 'flex';
+    document.getElementById('roomName').value = '';
+    document.getElementById('roomName').focus();
+  });
+  
+  // 모달 닫기 버튼
+  document.querySelectorAll('.modal-close, #cancelBtn, #closeInfoBtn, #cancelInviteBtn, #closeInvitationsBtn').forEach(button => {
+    button.addEventListener('click', function() {
+      document.querySelectorAll('.modal-backdrop').forEach(modal => {
+        modal.style.display = 'none';
+      });
+    });
+  });
+  
+  // 모달 바깥 클릭 시 닫기
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', function(e) {
+      if (e.target === this) {
+        this.style.display = 'none';
       }
+    });
+  });
+  
+  // 채팅방 생성 버튼 클릭
+  document.getElementById('createRoomBtn').addEventListener('click', createRoom);
+  
+  // 채팅방 목록 검색
+  document.getElementById('searchInput').addEventListener('input', function() {
+    const searchText = this.value.toLowerCase();
+    filterChatRooms(searchText);
+  });
+  
+  // 초대 버튼 클릭
+  document.getElementById('inviteBtn').addEventListener('click', function() {
+    document.getElementById('inviteModal').style.display = 'flex';
+    document.getElementById('inviteeId').value = '';
+    document.getElementById('inviteeId').focus();
+  });
+  
+  // 초대 보내기 버튼 클릭
+  document.getElementById('sendInviteBtn').addEventListener('click', sendInvitation);
+  
+  // 채팅방 정보 버튼 클릭
+  document.getElementById('infoBtn').addEventListener('click', function() {
+    if (activeRoom) {
+      loadRoomInfo(activeRoom.id);
+      document.getElementById('roomInfoModal').style.display = 'flex';
+    }
+  });
+  
+  // 모든 초대 보기 버튼 클릭
+  document.getElementById('viewAllInvitations').addEventListener('click', function() {
+    loadAllInvitations();
+    document.getElementById('invitationsListModal').style.display = 'flex';
+  });
+  
+  // 로그아웃 버튼 클릭
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userId');
+    window.location.href = 'index.html';
+  });
+}
+
+// API 요청 함수
+async function apiRequest(url, method = 'GET', data = null) {
+  const accessToken = localStorage.getItem('accessToken');
+  
+  const options = {
+    method: method,
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    }
+  };
+  
+  if (data && (method === 'POST' || method === 'PUT')) {
+    options.body = JSON.stringify(data);
+  }
+  
+  try {
+    const response = await fetch(`http://localhost:8081${url}`, options);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        // 인증 오류 시 로그인 페이지로 리다이렉트
+        localStorage.removeItem('accessToken');
+        window.location.href = 'login.html';
+        return null;
+      }
+      throw new Error(`API 요청 실패: ${response.status}`);
+    }
+    
+    // 204 No Content 응답 처리
+    if (response.status === 204) {
       return true;
     }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API 오류:', error);
+    return null;
+  }
+}
+
+// 채팅방 목록 로드
+async function loadChatRooms() {
+  const chatList = document.getElementById('chatList');
+  chatList.innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <span>채팅방 목록을 불러오는 중...</span>
+    </div>
+  `;
   
-    // 페이지 로드 시 인증 확인
-    if (!checkAuth()) {
-      return; // 인증 실패 시 함수 종료
+  try {
+    const response = await apiRequest('/api/rooms');
+    
+    if (!response) {
+      chatList.innerHTML = `<div class="empty-notifications">채팅방 목록을 불러올 수 없습니다.</div>`;
+      return;
     }
-  
-    // 드롭다운 메뉴 토글 기능 설정
-    dropdowns.forEach(dropdown => {
-      dropdown.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const menu = this.querySelector('.dropdown-menu');
-        
-        // 다른 드롭다운 메뉴 닫기
-        dropdowns.forEach(d => {
-          if (d !== dropdown) {
-            d.querySelector('.dropdown-menu').classList.remove('show');
-          }
-        });
-        
-        // 현재 드롭다운 메뉴 토글
-        menu.classList.toggle('show');
-      });
-    });
-  
-    // 화면 클릭 시 모든 드롭다운 메뉴 닫기
-    document.addEventListener('click', function() {
-      dropdowns.forEach(dropdown => {
-        dropdown.querySelector('.dropdown-menu').classList.remove('show');
-      });
-    });
-  
-    // 사용자 정보 설정
-    function setUserInfo() {
-      const userName = localStorage.getItem('userName') || '사용자';
-      const userEmail = localStorage.getItem('userEmail') || '';
-      
-      document.getElementById('username').textContent = userName;
-      
-      // 프로필 이미지 이니셜 설정
-      const profileImg = document.getElementById('profileImg');
-      profileImg.textContent = userName.charAt(0).toUpperCase();
+    
+    rooms = response; // 전역 변수에 저장
+    
+    if (rooms.length === 0) {
+      chatList.innerHTML = `<div class="empty-notifications">참여 중인 채팅방이 없습니다.</div>`;
+      return;
     }
-  
-    // 채팅방 목록 불러오기
-    async function loadChatRooms() {
-      try {
-        chatList.innerHTML = `
-          <div class="loading">
-            <div class="loading-spinner"></div>
-            <span>채팅방 목록을 불러오는 중...</span>
-          </div>
-        `;
-        
-        const accessToken = localStorage.getItem('accessToken');
-        if (!accessToken) {
-          window.location.href = 'login.html';
-          return;
-        }
-        
-        const response = await fetch(`${API_BASE_URL}/rooms`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('채팅방 목록을 불러오는데 실패했습니다.');
-        }
-        
-        const data = await response.json();
-        rooms = data; // 채팅방 데이터 저장
-        
-        renderChatRooms(rooms);
-      } catch (error) {
-        console.error('채팅방 목록 로드 오류:', error);
-        chatList.innerHTML = `
-          <div class="error-message">
-            <i class="fas fa-exclamation-circle"></i> 채팅방 목록을 불러오는데 실패했습니다.
-            <button class="btn btn-primary" style="margin-top: 10px;" id="retryBtn">다시 시도</button>
-          </div>
-        `;
-        
-        // 재시도 버튼에 이벤트 리스너 추가
-        document.getElementById('retryBtn').addEventListener('click', loadChatRooms);
-      }
-    }
-  
+    
     // 채팅방 목록 렌더링
-    function renderChatRooms(roomsToRender) {
-      chatList.innerHTML = '';
-      
-      if (roomsToRender.length === 0) {
-        chatList.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">
-              <i class="fas fa-comments"></i>
-            </div>
-            <p>채팅방이 없습니다.</p>
-            <p>새 채팅방을 만들어 대화를 시작하세요!</p>
-          </div>
-        `;
-        return;
+    renderChatRooms(rooms);
+    
+    // 마지막으로 활성화된 채팅방 확인
+    const lastActiveRoomId = localStorage.getItem('lastActiveRoomId');
+    if (lastActiveRoomId) {
+      const room = rooms.find(r => r.id === parseInt(lastActiveRoomId));
+      if (room) {
+        selectChatRoom(room);
       }
-      
-      roomsToRender.forEach(room => {
-        // 색상 계산 (채팅방 이름에 따라 다른 색상)
-        const colors = ['#4e73df', '#1cc88a', '#f6c23e', '#36b9cc', '#e74a3b'];
-        const colorIndex = room.id % colors.length;
-        const backgroundColor = colors[colorIndex];
-        
-        // 채팅방 생성/업데이트 시간 형식화
-        const updatedAt = new Date(room.updated_at || room.created_at);
-        const now = new Date();
-        const diffDays = Math.floor((now - updatedAt) / (1000 * 60 * 60 * 24));
-        const diffHours = Math.floor((now - updatedAt) / (1000 * 60 * 60));
-        const diffMinutes = Math.floor((now - updatedAt) / (1000 * 60));
-        
-        let timeText;
-        if (diffDays > 0) {
-          timeText = diffDays + '일 전';
-        } else if (diffHours > 0) {
-          timeText = diffHours + '시간 전';
-        } else if (diffMinutes > 0) {
-          timeText = diffMinutes + '분 전';
-        } else {
-          timeText = '방금 전';
-        }
-        
-        const roomElement = document.createElement('div');
-        roomElement.className = 'chat-item';
-        roomElement.dataset.roomId = room.id;
-        roomElement.innerHTML = `
-          <div class="chat-avatar" style="background-color: ${backgroundColor}">
-            ${room.name.charAt(0).toUpperCase()}
-          </div>
-          <div class="chat-info">
-            <div class="chat-header">
-              <div class="chat-name">${room.name}</div>
-              <div class="chat-time">${timeText}</div>
-            </div>
-            <div class="chat-preview">
-              ${new Date(room.created_at).toLocaleDateString()} 생성됨
-            </div>
-          </div>
-        `;
-        
-        roomElement.addEventListener('click', () => {
-          // 현재 활성화된 채팅방 비활성화
-          document.querySelectorAll('.chat-item.active').forEach(item => {
-            item.classList.remove('active');
-          });
-          
-          // 선택한 채팅방 활성화
-          roomElement.classList.add('active');
-          
-          // 채팅방 상세 페이지로 이동하거나 채팅방 내용 표시
-          // window.location.href = `chat-room.html?id=${room.id}`;
-          // 또는 현재 페이지에서 채팅방 내용 로드
-          // loadChatRoom(room.id);
-        });
-        
-        chatList.appendChild(roomElement);
-      });
     }
+  } catch (error) {
+    console.error('채팅방 목록 로드 오류:', error);
+    chatList.innerHTML = `<div class="empty-notifications">채팅방 목록을 불러올 수 없습니다.</div>`;
+  }
+}
+
+// 채팅방 목록 렌더링
+function renderChatRooms(roomList) {
+  const chatList = document.getElementById('chatList');
+  chatList.innerHTML = '';
   
-    // 새 채팅방 생성
-    async function createChatRoom(roomName) {
-      try {
-        const accessToken = localStorage.getItem('accessToken');
-        if (!accessToken) {
-          window.location.href = 'login.html';
-          return;
-        }
-        
-        const response = await fetch(`${API_BASE_URL}/rooms`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({ name: roomName })
-        });
-        
-        if (!response.ok) {
-          throw new Error('채팅방 생성에 실패했습니다.');
-        }
-        
-        const newRoom = await response.json();
-        
-        // 새 채팅방을 목록에 추가하고 다시 렌더링
-        rooms.unshift(newRoom);
-        renderChatRooms(rooms);
-        
-        // 모달 닫기
-        closeModal();
-        
-        // 새 채팅방 선택
-        setTimeout(() => {
-          const newRoomElement = document.querySelector(`.chat-item[data-room-id="${newRoom.id}"]`);
-          if (newRoomElement) {
-            newRoomElement.click();
-          }
-        }, 100);
-        
-        return newRoom;
-      } catch (error) {
-        console.error('채팅방 생성 오류:', error);
-        alert('채팅방 생성에 실패했습니다.');
-      }
-    }
+  roomList.forEach(room => {
+    const chatItem = document.createElement('div');
+    chatItem.className = 'chat-item';
+    chatItem.dataset.roomId = room.id;
     
-    // 모달 관련 함수
-    function openModal() {
-      newChatModal.classList.add('show');
-      roomNameInput.value = ''; // 입력 필드 초기화
-      roomNameInput.focus();
-    }
+    // 첫 글자를 가져와 아바타로 사용
+    const firstChar = room.name.charAt(0).toUpperCase();
     
-    function closeModal() {
-      newChatModal.classList.remove('show');
-    }
+    chatItem.innerHTML = `
+      <div class="chat-avatar">${firstChar}</div>
+      <div class="chat-details">
+        <div class="chat-name">${room.name}</div>
+        <div class="chat-participants">참여자 ${room.participantCount}명</div>
+      </div>
+    `;
     
-    // 검색 기능
-    function searchRooms(query) {
-      if (!query) {
-        renderChatRooms(rooms);
-        return;
-      }
-      
-      const filteredRooms = rooms.filter(room => 
-        room.name.toLowerCase().includes(query.toLowerCase())
-      );
-      
-      renderChatRooms(filteredRooms);
-    }
-    
-    // 로그아웃 처리
-    function logout() {
-      const accessToken = localStorage.getItem('accessToken');
-      
-      // API 호출 (선택 사항)
-      fetch(`${API_BASE_URL}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
-      }).catch(error => {
-        console.error('로그아웃 API 오류:', error);
-      }).finally(() => {
-        // localStorage에서 모든 사용자 데이터 삭제
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userEmail');
-        localStorage.removeItem('userId');
-        
-        // 로그인 페이지로 리다이렉트
-        window.location.href = 'index.html';
-      });
-    }
-  
-    // 이벤트 리스너 등록
-    newChatBtn.addEventListener('click', openModal);
-    startChatBtn.addEventListener('click', openModal);
-    closeModalBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    
-    createRoomBtn.addEventListener('click', async () => {
-      const roomName = roomNameInput.value.trim();
-      if (roomName) {
-        await createChatRoom(roomName);
-      } else {
-        alert('채팅방 이름을 입력해주세요.');
-      }
-    });
-    
-    searchInput.addEventListener('input', (e) => {
-      searchRooms(e.target.value);
-    });
-    
-    // 로그아웃 버튼에 이벤트 리스너 추가
-    logoutBtn.addEventListener('click', logout);
-    logoutButton.addEventListener('click', logout);
-    
-    // 모달 외부 클릭 시 닫기
-    newChatModal.addEventListener('click', (e) => {
-      if (e.target === newChatModal) {
-        closeModal();
-      }
-    });
-    
-    // Enter 키로 채팅방 생성
-    roomNameInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const roomName = roomNameInput.value.trim();
-        if (roomName) {
-          createChatRoom(roomName);
-        } else {
-          alert('채팅방 이름을 입력해주세요.');
-        }
-      }
-    });
-  
-    // 초기 설정 실행
-    setUserInfo();
-    loadChatRooms();
+    chatItem.addEventListener('click', () => selectChatRoom(room));
+    chatList.appendChild(chatItem);
   });
+}
+
+// 채팅방 선택
+function selectChatRoom(room) {
+  // 현재 활성화된 채팅방이 있으면 비활성화
+  const activeItem = document.querySelector('.chat-item.active');
+  if (activeItem) {
+    activeItem.classList.remove('active');
+  }
+  
+  // 선택한 채팅방 활성화
+  const chatItem = document.querySelector(`.chat-item[data-room-id="${room.id}"]`);
+  if (chatItem) {
+    chatItem.classList.add('active');
+  }
+  
+  // 전역 변수에 저장
+  currentRoomId = room.id;
+  activeRoom = room;
+  
+  // 마지막 활성화된 채팅방 ID 저장
+  localStorage.setItem('lastActiveRoomId', room.id);
+  
+  // 채팅방 상세 정보 로드
+  loadRoomInfo(room.id);
+  
+  // 채팅 UI 보이기
+  document.getElementById('welcomeMessage').style.display = 'none';
+  document.getElementById('chatContainer').style.display = 'flex';
+  
+  // 채팅방 정보 표시
+  document.getElementById('chatTitle').textContent = room.name;
+  document.getElementById('chatMembers').textContent = `참여자 ${room.participantCount}명`;
+}
+
+// 채팅방 필터링
+function filterChatRooms(searchText) {
+  if (!searchText) {
+    renderChatRooms(rooms);
+    return;
+  }
+  
+  const filteredRooms = rooms.filter(room => 
+    room.name.toLowerCase().includes(searchText)
+  );
+  
+  renderChatRooms(filteredRooms);
+}
+
+// 채팅방 생성
+async function createRoom() {
+  const roomName = document.getElementById('roomName').value.trim();
+  
+  if (!roomName) {
+    alert('채팅방 이름을 입력해주세요.');
+    return;
+  }
+  
+  const createBtn = document.getElementById('createRoomBtn');
+  createBtn.disabled = true;
+  createBtn.textContent = '생성 중...';
+  
+  try {
+    const response = await apiRequest('/api/rooms', 'POST', { name: roomName });
+    
+    if (response) {
+      // 모달 닫기
+      document.getElementById('newChatModal').style.display = 'none';
+      
+      // 채팅방 목록 새로고침
+      await loadChatRooms();
+      
+      // 새로 생성된 채팅방 선택
+      const newRoom = rooms.find(r => r.id === response.id);
+      if (newRoom) {
+        selectChatRoom(newRoom);
+      }
+    } else {
+      alert('채팅방을 생성하지 못했습니다.');
+    }
+  } catch (error) {
+    console.error('채팅방 생성 오류:', error);
+    alert('채팅방 생성 중 오류가 발생했습니다.');
+  } finally {
+    createBtn.disabled = false;
+    createBtn.textContent = '생성하기';
+  }
+}
+
+// 초대장 보내기
+async function sendInvitation() {
+  if (!activeRoom) {
+    alert('먼저 채팅방을 선택해주세요.');
+    return;
+  }
+  
+  const inviteeId = document.getElementById('inviteeId').value.trim();
+  
+  if (!inviteeId) {
+    alert('초대할 사용자 ID를 입력해주세요.');
+    return;
+  }
+  
+  const sendBtn = document.getElementById('sendInviteBtn');
+  sendBtn.disabled = true;
+  sendBtn.textContent = '초대 중...';
+  
+  try {
+    const response = await apiRequest(`/api/rooms/${activeRoom.id}/invite`, 'POST', { inviteeId: parseInt(inviteeId) });
+    
+    if (response) {
+      // 모달 닫기
+      document.getElementById('inviteModal').style.display = 'none';
+      alert('초대장을 성공적으로 보냈습니다.');
+    } else {
+      alert('초대장을 보내지 못했습니다.');
+    }
+  } catch (error) {
+    console.error('초대장 보내기 오류:', error);
+    alert('초대장 보내기 중 오류가 발생했습니다.');
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = '초대하기';
+  }
+}
+
+// 초대 목록 로드
+async function loadInvitations() {
+  try {
+    const response = await apiRequest('/api/invitations');
+    
+    if (!response) {
+      return;
+    }
+    
+    invitations = response; // 전역 변수에 저장
+    
+    // 초대장 개수 표시
+    const pendingInvitations = invitations.filter(invite => invite.status.toLowerCase() === 'pending');
+    const badge = document.getElementById('notificationBadge');
+    
+    if (pendingInvitations.length > 0) {
+      badge.style.display = 'flex';
+      badge.textContent = pendingInvitations.length;
+      
+      // 알림 목록 렌더링
+      renderInvitationNotifications(pendingInvitations);
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch (error) {
+    console.error('초대 목록 로드 오류:', error);
+  }
+}
+
+// 알림 목록 렌더링
+function renderInvitationNotifications(invitationsList) {
+  const invitationsContainer = document.getElementById('invitationsList');
+  invitationsContainer.innerHTML = '';
+  
+  if (invitationsList.length === 0) {
+    invitationsContainer.innerHTML = `<div class="empty-notifications">새 알림이 없습니다</div>`;
+    return;
+  }
+  
+  invitationsList.forEach(invitation => {
+    const invitationItem = document.createElement('div');
+    invitationItem.className = 'notification-item';
+    
+    // 시간 형식 변환
+    const invitedDate = new Date(invitation.invitedAt);
+    const formattedDate = `${invitedDate.getMonth() + 1}/${invitedDate.getDate()} ${invitedDate.getHours()}:${String(invitedDate.getMinutes()).padStart(2, '0')}`;
+    
+    invitationItem.innerHTML = `
+      <div class="notification-title">채팅방 초대</div>
+      <div class="notification-desc">채팅방 ${invitation.chatroomId}에 초대되었습니다.</div>
+      <div class="notification-actions">
+        <button class="notification-btn notification-btn-accept" data-invitation-id="${invitation.invitationId}">수락</button>
+        <button class="notification-btn notification-btn-reject" data-invitation-id="${invitation.invitationId}">거절</button>
+      </div>
+    `;
+    
+    invitationsContainer.appendChild(invitationItem);
+  });
+  
+  // 수락/거절 버튼에 이벤트 리스너 추가
+  invitationsContainer.querySelectorAll('.notification-btn-accept').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      acceptInvitation(btn.dataset.invitationId);
+    });
+  });
+  
+  invitationsContainer.querySelectorAll('.notification-btn-reject').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      rejectInvitation(btn.dataset.invitationId);
+    });
+  });
+}
+
+// 모든 초대 목록 로드
+async function loadAllInvitations() {
+  const invitationsContainer = document.getElementById('invitationsContainer');
+  invitationsContainer.innerHTML = `
+    <div class="loading">
+      <div class="loading-spinner"></div>
+      <span>초대 목록을 불러오는 중...</span>
+    </div>
+  `;
+  
+  try {
+    const response = await apiRequest('/api/invitations');
+    
+    if (!response) {
+      invitationsContainer.innerHTML = `<div class="empty-invitations">초대 목록을 불러올 수 없습니다.</div>`;
+      return;
+    }
+    
+    invitations = response; // 전역 변수에 저장
+    
+    if (invitations.length === 0) {
+      invitationsContainer.innerHTML = `<div class="empty-invitations">받은 초대가 없습니다.</div>`;
+      return;
+    }
+    
+    // 초대 목록 렌더링
+    invitationsContainer.innerHTML = '';
+    
+    invitations.forEach(invitation => {
+      const invitationItem = document.createElement('div');
+      invitationItem.className = 'invitation-item';
+      
+      // 시간 형식 변환
+      const invitedDate = new Date(invitation.invitedAt);
+      const formattedDate = `${invitedDate.getMonth() + 1}/${invitedDate.getDate()} ${invitedDate.getHours()}:${String(invitedDate.getMinutes()).padStart(2, '0')}`;
+      
+      let statusText = '';
+      let actionButtons = '';
+      
+      switch (invitation.status.toLowerCase) {
+        case 'pending':
+          statusText = '대기 중';
+          actionButtons = `
+            <div class="invitation-actions">
+              <button class="btn btn-success accept-btn" data-invitation-id="${invitation.invitationId}">수락</button>
+              <button class="btn btn-danger reject-btn" data-invitation-id="${invitation.invitationId}">거절</button>
+            </div>
+          `;
+          break;
+        case 'accepted':
+          statusText = '수락됨';
+          break;
+        case 'rejected':
+          statusText = '거절됨';
+          break;
+      }
+      
+      invitationItem.innerHTML = `
+        <div class="invitation-header">
+          <div class="invitation-title">채팅방 초대</div>
+          <div class="invitation-time">${formattedDate}</div>
+        </div>
+        <div class="invitation-details">
+          <p>채팅방 ID: ${invitation.chatroomId}</p>
+          <p>초대한 사용자 ID: ${invitation.inviterId}</p>
+          <p>상태: ${statusText}</p>
+        </div>
+        ${actionButtons}
+      `;
+      
+      invitationsContainer.appendChild(invitationItem);
+    });
+    
+    // 수락/거절 버튼에 이벤트 리스너 추가
+    invitationsContainer.querySelectorAll('.accept-btn').forEach(btn => {
+      btn.addEventListener('click', () => acceptInvitation(btn.dataset.invitationId));
+    });
+    
+    invitationsContainer.querySelectorAll('.reject-btn').forEach(btn => {
+      btn.addEventListener('click', () => rejectInvitation(btn.dataset.invitationId));
+    });
+  } catch (error) {
+    console.error('초대 목록 로드 오류:', error);
+    invitationsContainer.innerHTML = `<div class="empty-invitations">초대 목록을 불러올 수 없습니다.</div>`;
+  }
+}
+
+// 초대 수락
+async function acceptInvitation(invitationId) {
+  try {
+    const response = await apiRequest(`/api/invitations/${invitationId}/accept`, 'POST');
+    
+    if (response) {
+      alert('초대를 수락했습니다.');
+      
+      // 초대 목록 새로고침
+      loadInvitations();
+      
+      // 모달이 열려있으면 갱신
+      if (document.getElementById('invitationsListModal').style.display === 'flex') {
+        loadAllInvitations();
+      }
+      
+      // 채팅방 목록 새로고침
+      loadChatRooms();
+    } else {
+      alert('초대 수락에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('초대 수락 오류:', error);
+    alert('초대 수락 중 오류가 발생했습니다.');
+  }
+}
+
+// 초대 거절
+async function rejectInvitation(invitationId) {
+  try {
+    const response = await apiRequest(`/api/invitations/${invitationId}/reject`, 'POST');
+    
+    if (response) {
+      alert('초대를 거절했습니다.');
+      
+      // 초대 목록 새로고침
+      loadInvitations();
+      
+      // 모달이 열려있으면 갱신
+      if (document.getElementById('invitationsListModal').style.display === 'flex') {
+        loadAllInvitations();
+      }
+    } else {
+      alert('초대 거절에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('초대 거절 오류:', error);
+    alert('초대 거절 중 오류가 발생했습니다.');
+  }
+}
+
+// 채팅방 정보 로드
+async function loadRoomInfo(roomId) {
+  try {
+    const response = await apiRequest(`/api/rooms/${roomId}`);
+    
+    if (!response) {
+      return;
+    }
+    
+    // 채팅방 정보 표시
+    document.getElementById('roomInfoName').textContent = response.name;
+    document.getElementById('roomInfoHost').textContent = response.hostName;
+    document.getElementById('roomInfoMemberCount').textContent = response.participantCount;
+    
+    // 멤버 목록 렌더링
+    const membersList = document.getElementById('roomMembersList');
+    membersList.innerHTML = '';
+    
+    response.members.forEach(member => {
+      const memberItem = document.createElement('li');
+      memberItem.className = 'room-member-item';
+      
+      const isHost = member.userId === response.hostId;
+      const hostBadge = isHost ? '<span class="host-badge">방장</span>' : '';
+      
+      memberItem.innerHTML = `
+        <div class="member-avatar">${member.name.charAt(0).toUpperCase()}</div>
+        <div class="member-name">${member.name} ${hostBadge}</div>
+      `;
+      
+      membersList.appendChild(memberItem);
+    });
+  } catch (error) {
+    console.error('채팅방 정보 로드 오류:', error);
+  }
+}
