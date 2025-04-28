@@ -117,8 +117,19 @@
             <button class="send-btn" id="sendBtn">
               <i class="fas fa-paper-plane"></i>
             </button>
+            <!-- 여기 추가 -->
+            <button class="send-btn" id="sendFakeCodeBtn" title="가짜 코드 보내기">
+              <i class="fas fa-code"></i>
+            </button>
+            <button class="send-btn" id="sendFakeImageBtn" title="가짜 이미지 보내기">
+              <i class="fas fa-image"></i>
+            </button>
+            <button class="send-btn" id="sendFakeFileBtn" title="가짜 파일 보내기">
+              <i class="fas fa-file"></i>
+            </button>
           </div>
         </div>
+        
       </div>
     </div>
   </div>
@@ -210,5 +221,8 @@
   </div>
 
   <script src="js/chat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/highlight.min.js"></script>
 </body>
 </html>
